@@ -48,10 +48,11 @@ class NanoVNA:
     # correctly.
     def send_command(self, cmd):
         self.open()
+        print(f'Sending: {cmd}')
         self.serial.write(cmd.encode())
         self.serial.readline()  # discard empty line
 
-    def fetch_data(self):
+    def _fetch_data(self):
         result = ''
         line = ''
         while True:
@@ -76,7 +77,7 @@ class NanoVNA:
 
     def fetch_frequencies(self):
         self.send_command("frequencies\r")
-        data = self.fetch_data()
+        data = self._fetch_data()
         x = []
         for line in data.split('\n'):
             if line:
@@ -87,6 +88,21 @@ class NanoVNA:
     # trace man
     # trace {0|1|2|3|all} [logmag|phase|delay|smith|polar|linear|swr|real|imag|r|x|q|off] [src]
     # trace {0|1|2|3} {scale|refpos} {value}
+    def set_trace(self, trace, trace_format, channel):
+        valid_trace_input = [0, 1, 2, 3, 'all']
+        if trace not in valid_trace_input:
+            raise AttributeError(f'First parameter should be from the list: {valid_trace_input}')
+
+        valid_trace_format_input = ['logmag', 'phase', 'delay', 'smith', 'polar', 'linear', 'swr', 'real', 'imag',
+                                    'r', 'x', 'q', 'off']
+        if trace_format not in valid_trace_format_input:
+            raise AttributeError(f'Second parameter should be from the list: {valid_trace_format_input}')
+
+        valid_channel_input = [0, 1]
+        if channel not in valid_channel_input:
+            raise AttributeError(f'Third parameter should be from the list: {valid_channel_input}')
+
+        self.send_command('trace %s %s %s\r' % (trace, trace_format, channel))
 
     def set_sweep(self, start, stop):
         if start is not None:
@@ -117,7 +133,7 @@ class NanoVNA:
 
     def fetch_array(self, sel):
         self.send_command("data %d\r" % sel)
-        data = self.fetch_data()
+        data = self._fetch_data()
         x = []
         for line in data.split('\n'):
             if line:
@@ -130,9 +146,9 @@ class NanoVNA:
     def pause(self):
         self.send_command("pause\r")
 
-    def data(self, array=0):
+    def data(self, array=0) -> np.array:
         self.send_command("data %d\r" % array)
-        data = self.fetch_data()
+        data = self._fetch_data()
         x = []
         for line in data.split('\n'):
             if line:
