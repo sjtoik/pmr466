@@ -15,7 +15,7 @@ def polar():
     time.sleep(3)
 
     capture = vna.capture()
-    capture.save('nanovna-01-lead-polar.png', 'PNG')
+    capture.save('nanovna-01/lead-polar.png', 'PNG')
 
 
 def smith():
@@ -26,7 +26,7 @@ def smith():
     time.sleep(3)
 
     capture = vna.capture()
-    capture.save('nanovna-01-lead-smith.png', 'PNG')
+    capture.save('nanovna-01/lead-smith.png', 'PNG')
 
 
 def swr():
@@ -37,7 +37,7 @@ def swr():
     time.sleep(3)
 
     capture = vna.capture()
-    capture.save('nanovna-01-lead-swr.png', 'PNG')
+    capture.save('nanovna-01/lead-swr.png', 'PNG')
 
 
 def problems():
@@ -49,12 +49,12 @@ def problems():
     time.sleep(5)
 
     capture = vna.capture()
-    capture.save('nanovna-01-lead-problems.png', 'PNG')
+    capture.save('nanovna-01/lead-problems.png', 'PNG')
 
     print('Sleeping 2')
     time.sleep(2)
     data = vna.data()
-    numpy.save('nanovna-01-lead-problems.npy', data)
+    numpy.save('nanovna-01/lead-problems.npy', data)
 
 
 # polar()
