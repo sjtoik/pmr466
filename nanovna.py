@@ -2,18 +2,20 @@
 # Adapted from https://github.com/ttrftech/NanoVNA/blob/master/python/nanovna.py
 # Removed functions with references to python 2.7 only libraries like `def smithd3(self, x):` using twoport.
 # Removed script command line interface.
+# Refactored functions.
 
-# Commands: version reset freq offset dac saveconfig clearconfig data frequencies bandwidth port stat gain power
-# sample scan sweep test touchcal touchtest pause resume cal save recall trace marker edelay capture vbat vbat_offset
-# transform threshold help info color
+# Available commands: version reset freq offset dac saveconfig clearconfig data frequencies bandwidth port stat gain
+# power sample scan sweep test touchcal touchtest pause resume cal save recall trace marker edelay capture vbat
+# vbat_offset transform threshold help info color
 
-import serial
-from serial.tools import list_ports
-import numpy as np
-from matplotlib import pylab as pl
 import struct
-import skrf
+
 import PIL
+import numpy as np
+import serial
+import skrf
+from matplotlib import pylab as pl
+from serial.tools import list_ports
 
 
 class NanoVNA:
