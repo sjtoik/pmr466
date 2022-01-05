@@ -23,13 +23,16 @@ class NanoVNA:
     PID = 0x5740  # 22336
 
     def __init__(self, dev=None):
-        self.dev = dev or self.get_port()
+        self._tty = dev or self.get_tty()
         self.serial = None
         self._frequencies = None
         self.points = 101
 
+    def __del__(self):
+        self.close()
+
     @staticmethod
-    def get_port() -> str:
+    def get_tty() -> str:
         device_list = list_ports.comports()
         for device in device_list:
             if device.vid == NanoVNA.VID and device.pid == NanoVNA.PID:
@@ -37,22 +40,49 @@ class NanoVNA:
                 return device.device
         raise OSError("USB device not found")
 
-    def open(self):
+    def _open(self):
         if self.serial is None:
-            self.serial = serial.Serial(self.dev)
+            self.serial = serial.Serial(self._tty)
+            self.serial.reset_input_buffer()
+            self.serial.reset_output_buffer()
 
     def close(self):
         if self.serial:
             self.serial.close()
         self.serial = None
 
-    # Command promt doesn't always return a single line. Some commands return a help text, if the input is not formatted
-    # correctly.
     def send_command(self, cmd):
-        self.open()
-        print(f'Sending: {cmd}')
+        self._open()
+        print(f'Sending: {cmd.encode()}')
         self.serial.write(cmd.encode())
-        self.serial.readline()  # discard empty line
+        # self.serial.readline()  # discard empty line
+        data = self._fetch_line()
+        print(f'Result: {data.encode()}')
+
+    def _fetch_line(self) -> str:
+        line = ''
+        while True:
+            c = self.serial.read().decode('utf-8')
+            line += c
+            if c == chr(10):
+                return line.strip()
+            if line.endswith('ch> '):  # the line was prompt
+                return ''
+
+    def _fetch_lines(self) -> []:
+        result = []
+        line = ''
+        while True:
+            c = self.serial.read().decode('utf-8')
+            line += c
+            if c == chr(10):
+                result += line.strip()
+                line = ''
+                continue  # newline found
+            if line.endswith('ch> '):
+                # stop on prompt
+                break
+        return result
 
     def _fetch_data(self):
         result = ''
@@ -66,7 +96,7 @@ class NanoVNA:
                 result += line
                 line = ''
                 continue  # newline found
-            if line.endswith('ch>'):
+            if line.endswith('ch> '):
                 # stop on prompt
                 break
         return result
@@ -79,9 +109,9 @@ class NanoVNA:
 
     def fetch_frequencies(self):
         self.send_command("frequencies\r")
-        data = self._fetch_data()
+        lines = self._fetch_lines()
         x = []
-        for line in data.split('\n'):
+        for line in lines:
             if line:
                 x.append(float(line))
         self._frequencies = np.array(x)
@@ -105,6 +135,12 @@ class NanoVNA:
             raise AttributeError(f'Third parameter should be from the list: {valid_channel_input}')
 
         self.send_command('trace %s %s %s\r' % (trace, trace_format, channel))
+
+    # marker [n] [on|off|{index}]
+    # marker numbering starts from 1
+    # the index is the point what value the marker should display from 0 to 100 (101) points by default
+    def set_marker(self, n: int, value):
+        self.send_command('marker %d %s\r' % (n, value))
 
     def set_sweep(self, start, stop):
         if start is not None:
@@ -135,9 +171,9 @@ class NanoVNA:
 
     def fetch_array(self, sel):
         self.send_command("data %d\r" % sel)
-        data = self._fetch_data()
+        lines = self._fetch_lines()
         x = []
-        for line in data.split('\n'):
+        for line in lines:
             if line:
                 x.extend([float(d) for d in line.strip().split(' ')])
         return np.array(x[0::2]) + np.array(x[1::2]) * 1j
@@ -150,9 +186,9 @@ class NanoVNA:
 
     def data(self, array=0) -> np.array:
         self.send_command("data %d\r" % array)
-        data = self._fetch_data()
+        lines = self._fetch_lines()
         x = []
-        for line in data.split('\n'):
+        for line in lines:
             if line:
                 d = line.strip().split(' ')
                 x.append(float(d[0]) + float(d[1]) * 1.j)

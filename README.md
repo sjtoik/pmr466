@@ -13,3 +13,21 @@ The projects plan is to:
 4. (optional) Build the TX part
 
 PRM466 channels start from 446.00625 MHz  and ends to 446.196875 MHz
+
+# NanoVNA
+A really good [description of shell commands](https://oristopo.github.io/nVhelp/html/shell.htm).
+
+```
+ch> info
+NanoVNA
+2016-2020 Copyright @edy555
+Licensed under GPL. See: https://github.com/ttrftech/NanoVNA
+Version: 0.8.0
+Build Time: Jun 19 2020 - 23:16:02
+Kernel: 4.0.0
+Compiler: GCC 8.2.1 20181213 (release) [gcc-8-branch revision 267074]
+Architecture: ARMv6-M Core Variant: Cortex-M0
+Port Info: Preemption through NMI
+Platform: STM32F072xB Entry Level Medium Density devices
+ch> 
+```
