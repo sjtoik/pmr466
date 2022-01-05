@@ -1,3 +1,6 @@
+# Adapted from https://github.com/ttrftech/NanoVNA/blob/master/python/nanovna.py
+# The implementation needed a full rewrite due to implementation style and python 3 differences
+
 # Available commands: version reset freq offset dac saveconfig clearconfig data frequencies bandwidth port stat gain
 # power sample scan sweep test touchcal touchtest pause resume cal save recall trace marker edelay capture vbat
 # vbat_offset transform threshold help info color
@@ -5,13 +8,18 @@
 import serial
 from serial.tools import list_ports
 import time
+import logging
+import PIL
+import struct
+import numpy as np
 
 
 class NanoVNA:
     VID = 0x0483  # 1155
     PID = 0x5740  # 22336
 
-    def __init__(self):
+    def __init__(self, loglevel=logging.INFO):
+        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=loglevel)
         self._tty = self.get_tty()
         self.serial = None
         self._frequencies = None
@@ -25,7 +33,7 @@ class NanoVNA:
         device_list = list_ports.comports()
         for device in device_list:
             if device.vid == NanoVNA.VID and device.pid == NanoVNA.PID:
-                print(f'Using {device}')
+                logging.info(f'Using {device}')
                 return device.device
         raise OSError("USB device not found")
 
@@ -42,12 +50,13 @@ class NanoVNA:
 
     def _send_command(self, cmd):
         """
-        It is users responsibility to handle the output. The output can be:
-        * <cmd>\r\n
-        * <cmd>\r\n + <data_lines>\r\n
+        Users is responsible on the output handling. _send_command reads only the current line, which is the transmitted
+        instruction. Rest of the output can be:
+
+        * <data_lines>\r\n
         * <cmd>? for unrecognized input
-        * <cmd>\r\n + help text explaining the syntax of the <cmd>
-        * <cmd>\r\n + <binary> for transmitting the capture
+        * <help>\r\n text lines explaining the syntax of the <cmd>
+        * <binary> for transmitting the capture
         * b'ch> ' without newline
 
         It is advisable to pause and resume when making data captures, as there is no guarantee that the memory is not
@@ -64,10 +73,10 @@ class NanoVNA:
             cmd += '\r'
 
         self._open()
-        print(f'Sending: {cmd.encode()}')
+        logging.debug(f'Sending: {cmd.encode()}')
         self.serial.write(cmd.encode())
         data = self._read_line()
-        print(f'Result: {data}')
+        logging.debug(f'Result: {data}')
 
     def _read_line(self) -> bytearray:
         line = bytearray()
@@ -81,13 +90,13 @@ class NanoVNA:
                 break
         return line
 
-    def _read_lines(self) -> bytearray:
-        result = bytearray()
+    def _read_lines(self) -> [str]:
+        result = []
         while True:
             line = self._read_line()
             if line == b'':
                 break
-            result += line
+            result.append(line.decode('utf-8').strip())
         return result
 
     # marker [n] [on|off|{index}]
@@ -95,14 +104,34 @@ class NanoVNA:
     # the index is the point what value the marker should display from 0 to 100 (101) points by default
     def set_marker(self, n: int, index):
         self._send_command('marker %d %s' % (n, index))
+        self._read_lines()
 
     # trace {0|1|2|3|all} [logmag|phase|delay|smith|polar|linear|swr|real|imag|r|x|q|off] [src]
     # trace {0|1|2|3} {scale|refpos} {value}
     def set_trace(self, trace, trace_format, channel):
         self._send_command('trace %s %s %s' % (trace, trace_format, channel))
+        # the device output buffer contains the command, and the next prompt
+        self._read_lines()
 
+    # pause doesn't return anything but the 'ch> ' prompt, but as there is a \n\r and that prompt in the buffer
+    # it's important to read them both, so the next command doesn't get confused
     def pause(self):
         self._send_command('pause')
+        self._read_lines()
 
     def resume(self):
         self._send_command('resume')
+        self._read_lines()
+
+    def get_frequencies(self):
+        self._send_command('frequencies')
+        return self._read_lines()
+
+    def capture(self) -> PIL.Image:
+        self._send_command("capture")
+        b = self.serial.read(320 * 240 * 2)
+        x = struct.unpack(">76800H", b)
+        arr = np.array(x, dtype=np.uint32)  # convert pixel format from 565(RGB) to 8888(RGBA)
+        arr = 0xFF000000 + ((arr & 0xF800) >> 8) + ((arr & 0x07E0) << 5) + ((arr & 0x001F) << 19)
+        return PIL.Image.frombuffer('RGBA', (320, 240), arr, 'raw', 'RGBA', 0, 1)
+
