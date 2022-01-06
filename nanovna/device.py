@@ -50,8 +50,10 @@ class NanoVNA:
 
     def _send_command(self, cmd):
         """
-        Users is responsible on the output handling. _send_command reads only the current line, which is the transmitted
-        instruction. Rest of the output can be:
+        Users is responsible on the output handling. Calling _read_lines after execution also acts as a synchronization
+        point for the connection. A new command is not sent to buffer before previous one has outputted a newline or a
+        promt. _send_command reads only the current line up to the next newline, no further.
+        Rest of the output can be:
 
         * <data_lines>\r\n
         * <cmd>? for unrecognized input
@@ -135,3 +137,37 @@ class NanoVNA:
         arr = 0xFF000000 + ((arr & 0xF800) >> 8) + ((arr & 0x07E0) << 5) + ((arr & 0x001F) << 19)
         return PIL.Image.frombuffer('RGBA', (320, 240), arr, 'raw', 'RGBA', 0, 1)
 
+    # data {0|1|2|3|4|5|6}
+    def get_data(self, array=0) -> np.array:
+        if not 0 <= array <= 6:
+            raise AttributeError('There are data arrays only from 0 to 6')
+
+        self._send_command('data %d' % array)
+        lines = self._read_lines()
+        x = []
+        for line in lines:
+            if line:
+                d = line.split(' ')
+                x.append(float(d[0]) + float(d[1]) * 1.j)
+        return np.array(x)
+
+    def get_info(self) -> [str]:
+        self._send_command('info')
+        return self._read_lines()
+
+    def get_sweep(self) -> (int, int, int):
+        self._send_command('sweep')
+        lines = self._read_lines()
+        values = lines[0].split(' ')
+        values = [int(n) for n in values]
+        return values[0], values[1], values[2]
+
+    # you should really recalibrate after changing the sweep
+    def set_sweep(self, start, stop, points):
+        self._send_command('sweep %d %d %d' % (start, stop, points))
+        self._read_lines()
+
+    # sending scan command seems to call pause implicitly
+    def set_scan(self, start, stop, points):
+        self._send_command('scan %d %d %d' % (start, stop, points))
+        self._read_lines()
