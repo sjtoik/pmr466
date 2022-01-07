@@ -1,5 +1,7 @@
-import time
 import os
+import time
+
+import numpy
 
 
 class Measurements:
@@ -10,6 +12,17 @@ class Measurements:
         self.prefix = prefix
         if not os.path.isdir(directory):
             raise AttributeError(f'{directory} is not a directory')
+
+    def _save_data(self, suffix):
+        start, stop, points = self.vna.get_sweep()
+        self.vna.set_scan(start, stop, points)
+        time.sleep(0.5)
+        capture = self.vna.capture()
+        capture.save(f'{self.directory}/{self.prefix}-{suffix}.png', 'PNG')
+
+        data = self.vna.get_data()
+        numpy.save(f'{self.directory}/{self.prefix}-{suffix}.npy', data)
+        self.vna.resume()
 
     def clear_screen(self):
         self.vna.pause()
@@ -23,33 +36,32 @@ class Measurements:
         time.sleep(0.5)
 
     def polar(self):
+        self.vna.resume()
         self.vna.set_trace(0, 'polar', 0)
         self.vna.set_trace(1, 'linear', 0)
         self.vna.set_trace(2, 'real', 0)
         self.vna.set_trace(3, 'imag', 0)
-        time.sleep(0.5)
+        time.sleep(1)
 
-        capture = self.vna.capture()
-        capture.save(f'{self.directory}/{self.prefix}-polar.png', 'PNG')
+        self._save_data('polar')
 
     def smith(self):
+        self.vna.resume()
         self.vna.set_trace(0, 'logmag', 0)
         self.vna.set_trace(1, 'phase', 0)
         self.vna.set_trace(2, 'delay', 0)
         self.vna.set_trace(3, 'smith', 0)
-        time.sleep(0.5)
+        time.sleep(1)
 
-        capture = self.vna.capture()
-        capture.save(f'{self.directory}/{self.prefix}-smith.png', 'PNG')
+        self._save_data('smith')
 
     def swr(self):
+        self.vna.resume()
         self.vna.set_trace(0, 'swr', 0)
         self.vna.set_trace(1, 'r', 0)
         self.vna.set_trace(2, 'x', 0)
         self.vna.set_trace(3, 'q', 0)
-        time.sleep(0.5)
+        time.sleep(1)
 
-        capture = self.vna.capture()
-        capture.save(f'{self.directory}/{self.prefix}-swr.png', 'PNG')
-
+        self._save_data('swr')
 

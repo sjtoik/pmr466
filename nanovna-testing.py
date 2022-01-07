@@ -1,8 +1,9 @@
+import logging
+import time
+
 import numpy
 
 import nanovna
-import time
-import logging
 
 DIR = 'nanovna-testing'
 PREFIX = 'testing'
@@ -36,8 +37,8 @@ def full_pull():
 
 
 def snapshot_test():
-    measurements = nanovna.Measurements(vna, DIR, PREFIX)
-    measurements.clear_screen()
+    m = nanovna.Measurements(vna, DIR, PREFIX)
+    m.clear_screen()
 
     vna.set_trace(0, 'polar', 0)
     vna.set_trace(1, 'linear', 0)
@@ -62,4 +63,10 @@ def snapshot_test():
 #vna.set_sweep(300e6, 500e6, 101)
 #vna.set_marker(1, 73)
 #full_pull()
-snapshot()
+#snapshot_test()
+
+measurements = nanovna.Measurements(vna, DIR, PREFIX)
+vna.set_marker(1, 73)
+measurements.polar()
+measurements.smith()
+measurements.swr()

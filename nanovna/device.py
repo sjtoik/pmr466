@@ -135,9 +135,18 @@ class NanoVNA:
         x = struct.unpack(">76800H", b)
         arr = np.array(x, dtype=np.uint32)  # convert pixel format from 565(RGB) to 8888(RGBA)
         arr = 0xFF000000 + ((arr & 0xF800) >> 8) + ((arr & 0x07E0) << 5) + ((arr & 0x001F) << 19)
-        return PIL.Image.frombuffer('RGBA', (320, 240), arr, 'raw', 'RGBA', 0, 1)
+        image = PIL.Image.frombuffer('RGBA', (320, 240), arr, 'raw', 'RGBA', 0, 1)
+        self._read_lines()  # clear out the remaining buffer
+        return image
 
     # data {0|1|2|3|4|5|6}
+    # 0: S11
+    # 1: S21
+    # 2: /* error term directivity */
+    # 3: /* error term source match */
+    # 4: /* error term reflection tracking */
+    # 5: /* error term transmission tracking */
+    # 6: /* error term isolation */
     def get_data(self, array=0) -> np.array:
         if not 0 <= array <= 6:
             raise AttributeError('There are data arrays only from 0 to 6')
