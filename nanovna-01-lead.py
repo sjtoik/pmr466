@@ -4,7 +4,6 @@ import nanovna
 import time
 
 vna = nanovna.NanoVNA()
-vna.open()
 
 
 def polar():
@@ -53,7 +52,7 @@ def problems():
 
     print('Sleeping 2')
     time.sleep(2)
-    data = vna.data()
+    data = vna.capture()
     numpy.save('nanovna-01/lead-problems.npy', data)
 
 
@@ -61,4 +60,3 @@ def problems():
 # smith()
 # swr()
 problems()
-vna.close()

@@ -48,5 +48,5 @@ def test():
 #smith()
 #swr()
 #test()
-arr1 = vna.fetch_array(0)
-arr2 = vna.data()
+arr1 = vna.get_data(0)
+arr2 = vna.get_data(1)

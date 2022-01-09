@@ -14,8 +14,14 @@ The projects plan is to:
 
 PRM466 channels start from 446.00625 MHz  and ends to 446.196875 MHz
 
+The project so far:
+1. [nanovna-01](./nanovna-01) tinkering with the device
+2. [nanovna-02](./nanovna-02) start on filter measurements
+3. [nanovna-testing](./nanovna-testing) rewrite the serial implementation
+
 # NanoVNA
-A really good [description of shell commands](https://oristopo.github.io/nVhelp/html/shell.htm).
+* A really good [description of shell commands](https://oristopo.github.io/nVhelp/html/shell.htm).
+
 
 ```
 ch> info
